@@ -1,0 +1,652 @@
+---
+title: "Final project"
+author: "Sithembile Chithenga"
+date: "4/20/2020"
+output: html_document
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook for my final project that was aimed at assessing the association between women's empowerment indices and fertility preferences among Haitian  women.  Dataset was A nationally representative sample Haitian women  in the 2016/17 Demographic Health Survey. The first part contains SPSS syntax for  preliminary data management, cleaning, descriptives, and principal component analysis (PCA) with Monte Carlo parallel analysis to derive composite indices. 
+
+
+```
+# SPSS Syntax
+
+#cleaning, recodes and preliminary analysis part 2.
+
+ # Import DHS dataset.
+GET
+  FILE='C:\Users\testi\Desktop\ADA FINAL\SPSS files\SPSS files\HTBR70SV\HTBR70FL.sav'.
+DATASET NAME DataSet9 WINDOW=FRONT.
+
+# Using codebook identifid relevant variable and save as new data set.
+
+SAVE OUTFILE= 'C:\Users\testi\Desktop\ADA FINAL\ada4.19.sav'
+  /KEEP  CASEID V012 V501 V531 V613 V218 V743B  V632  V743D V743A  V384A V384B V384C V212 V731 V741 V745A V745B V107 V158 V157 V190 V190A V133  V159 V701 V136 V130 V102 V505.
+
+# open new subset data set.
+
+GET
+  FILE='C:\Users\testi\Desktop\ADA FINAL\ada4.19.sav'.
+DATASET NAME DataSet9 WINDOW=FRONT.
+
+# Create data subset data set married women, & women aged 35 and over.
+DATASET COPY  Married.35.
+DATASET ACTIVATE  Married.35.
+FILTER OFF.
+USE ALL.
+SELECT IF (v501 = 1 AND V012 >= 35).
+EXECUTE.
+
+
+/* the married woman’s ability to have just the desired number of children.  computed by subtracting the ideal number of children from the number of living children.
+DATASET ACTIVATE Married.35.
+COMPUTE Ability_Desired=V218 - V613.
+EXECUTE.
+
+/*  Recode  Ability_Desired = If negative recode as less than ideal; If zero recode as achieves ideal;If negative recode as less than ideal; If positive recode as more than ideal.
+RECODE Ability_Desired (0=1) (Lowest thru -1=2) (1 thru Highest=3) INTO RecoAbility.
+VARIABLE LABELS  RecoAbility 'ability to have just the desired number of children'.
+VALUE LABELS RecoAbility 1 'achieves ideal' 2 'less than ideal'  3 'more than idea'.
+EXECUTE.
+
+/* Recode missing values as missing.
+DATASET ACTIVATE Married.35.
+RECODE V613  V012 V501 V531 V613 V218 V743B  V632  V743D V743A  V384A V384B V384C  V731 V741 V745A V745B V133 V158 V157  V190A V159 V701 V136  V130 V102 V505 (99=SYSMIS).
+RECODE V531 V613 V505  (98=SYSMIS).
+RECODE V531 V133 (97=SYSMIS).
+recode V701 (8=SYSMIS).
+EXECUTE.
+
+/* Recode number of other wives if greater than zero as polygamous.
+RECODE V505  (1 thru HIGHEST=1).
+VALUE LABELS v505 0' No other wives'  1 'Polygmaous'.
+EXECUTE.
+
+/* Recode nonumeric responde as 4 as per pertocol.
+RECODE V613 (ELSE=Copy) (96=4)  INTO recode_ideal.
+VARIABLE LABELS  recode_ideal 'ideal with non numeric recoded to 4'.
+EXECUTE.
+
+
+/* the married woman’s ability to have just the desired number of children.  numAbility_Desired computed by subtracting the ideal number of children from the number of living children.
+
+COMPUTE numAbility_Desired = V218 - recode_ideal.
+EXECUTE.
+
+
+/*  Recode  numAbility_Desirde= If negative recode as less than ideal; If zero recode as achieves ideal;If negative recode as less than ideal; If positive recode as more than ideal.
+
+RECODE numAbility_Desired (0=1) (Lowest thru -1=2) (1 thru Highest=3) INTO nonnumAbility.
+VARIABLE LABELS   nonnumAbility 'ability to have just the desired number of children'.
+VALUE LABELS  nonnumAbility 1 'achieves ideal' 2 'less than ideal'  3 'more than idea'.
+EXECUTE.
+
+
+/* Recode catergorical variable as per operational procotol.
+
+RECODE V743B (1=1) (2 thru 3=0) (4 thru 6=-1) INTO reco_purchase.
+RECODE  V743D (1=1) (2 thru 3=0) (4 thru 6=-1) INTO reco_visit.
+RECODE  V743A (1=1) (2 thru 3=0) (4 thru 6=-1) INTO reco_care.
+RECODE V632 (1=1)  (3=0) (2=-1) INTO reco_contra. 
+RECODE V731 (0=0) (1=1) (2 thru 3=2) INTO reco_work. 
+RECODE V741 (0=0) (1=3) (2=2) (3=1) INTO reco_pay. 
+RECODE  V745A (0=-1) (1=1) (3=1) (2=0)  INTO reco_house.
+RECODE  V745B (0=-1) (1=1) (3=1) (2=0)  INTO reco_land.
+RECODE V158  (0=0) (1=1) (2 thru 3=2)   INTO reco_freradio.
+RECODE V157  (0=0) (1=1) (2 thru 3=2)   INTO reco_frenews.
+VARIABLE LABELS  reco_purchase 'reco_purchase' reco_contra 'reco_contra' reco_visit 'reco_visit' reco_care 'reco_care'.
+VALUE LABELS reco_purchase reco_visit reco_care reco_contra -1 'Husband/other alone' 0 'joint' 1 'respondent alone'.
+VALUE LABELS  reco_freradio reco_frenews 0 'Not at all'  1 'Less than once a week'  2 'At least once a week'.
+VALUE LABELS  reco_house reco_land -1 'Does not own' 0 'Jointly only' 1 'Alone only or Both alone and jointly'.
+value labels reco_pay 0 'Not paid' 1 'In-kind only' 2 'Cash and in-kind'  3 'Cash only'.
+value labels reco_work 0 'No' 1 'In the past year' 2 'Have a job, but on leave or Currently working'.
+EXECUTE.
+
+RECODE V136  (1 thru 3=1) (4 thru 6=2) INTO size_reco.
+VARIABLE LABELS  size_reco 'size_reco'.
+VALUE LABELS size_reco 1 '1-3' 2 '4-6' 3 '7-9' 4 '10 and more'.
+EXECUTE.
+variable level    reco_purchase reco_visit reco_care reco_contra reco_work reco_pay reco_house reco_land reco_freradio reco_frenews V531 V212 V384A V133 V384B V384C   (scale).
+EXECUTE.
+
+
+# save new subset containing keeping only variable of interests.
+
+SAVE OUTFILE= 'C:\Users\testi\Desktop\ADA FINAL\finalada4.19.sav'
+  /KEEP CASEID V012 V212
+V531
+V613
+nonnumAbility
+V384A
+V384B
+V384C
+V133
+V701
+V501
+V136
+size_reco 
+V190
+V190A
+V130
+V102
+V505
+reco_purchase
+reco_visit
+reco_care
+reco_contra
+reco_work
+reco_pay
+reco_house
+reco_land
+reco_freradio
+reco_frenews.
+
+# Opening subset data.
+
+GET
+  FILE='C:\Users\testi\Desktop\ADA FINAL\finalada4.19.sav'.
+DATASET NAME DataSet14 WINDOW=FRONT.
+
+
+*Table 1 Descriptive summaries.
+
+FREQUENCIES VARIABLES=V012 cat_ideal nonnumAbility V102 V190A V701 size_reco V505 V130
+  /STATISTICS=STDDEV VARIANCE RANGE MEAN MEDIAN MODE
+  /ORDER=ANALYSIS.
+
+
+ *factor analysis.
+
+DATASET ACTIVATE DataSet14.
+FACTOR
+  /VARIABLES V212 V531 V384A V384B V384C V133 reco_purchase reco_visit reco_care reco_contra 
+    reco_work reco_pay reco_house reco_land reco_freradio reco_frenews
+  /MISSING PAIRWISE 
+  /ANALYSIS V212 V531 V384A V384B V384C V133 reco_purchase reco_visit reco_care reco_contra 
+    reco_work reco_pay reco_house reco_land reco_freradio reco_frenews
+  /PRINT UNIVARIATE INITIAL CORRELATION KMO EXTRACTION ROTATION FSCORE
+  /FORMAT SORT BLANK(.30)
+  /PLOT EIGEN
+  /CRITERIA FACTORS(5) ITERATE(25)
+  /EXTRACTION PC
+  /CRITERIA ITERATE(25) DELTA(0)
+  /ROTATION OBLIMIN
+  /SAVE REG(ALL)
+  /METHOD=CORRELATION.
+
+
+*/DHS aggregate women's empowerment index
+
+FACTOR
+  /VARIABLES reco_purchase reco_visit reco_care reco_contra reco_work reco_pay reco_house reco_land 
+    reco_freradio reco_frenews V531 V212 V384A V133 V384B V384C
+  /MISSING MEANSUB 
+  /ANALYSIS reco_purchase reco_visit reco_care reco_contra reco_work reco_pay reco_house reco_land 
+    reco_freradio reco_frenews V531 V212 V384A V133 V384B V384C
+ /PRINT UNIVARIATE INITIAL EXTRACTION FSCORE 
+ /PLOT EIGEN
+ /CRITERIA FACTORS(1) ITERATE(25) 
+ /EXTRACTION PC  
+/ROTATION NOROTATE  
+/SAVE REG(ALL) 
+ /METHOD=CORRELATION .
+
+
+*/DHS social empowerment index.
+
+FACTOR
+  /VARIABLES reco_freradio reco_frenews V133 
+  /MISSING MEANSUB 
+  /ANALYSIS  reco_freradio reco_frenews V133 
+ /PRINT UNIVARIATE INITIAL EXTRACTION FSCORE 
+ /PLOT EIGEN
+ /CRITERIA FACTORS(1) ITERATE(25) 
+ /EXTRACTION PC  
+/ROTATION NOROTATE  
+/SAVE REG(ALL) 
+ /METHOD=CORRELATION .
+
+
+*/DHS economic empowerment index.
+
+FACTOR
+  /VARIABLES reco_work reco_pay reco_house reco_land 
+      /MISSING MEANSUB 
+  /ANALYSIS reco_work reco_pay reco_house reco_land 
+ /PRINT UNIVARIATE INITIAL EXTRACTION FSCORE 
+  /PLOT EIGEN
+/CRITERIA FACTORS(1) ITERATE(25) 
+ /EXTRACTION PC  
+/ROTATION NOROTATE  
+/SAVE REG(ALL) 
+ /METHOD=CORRELATION .
+
+
+*/DHS family empowerment index.
+
+FACTOR
+  /VARIABLES reco_purchase reco_visit reco_care reco_contra  V531 V212 V384A V384B V384C
+  /MISSING MEANSUB 
+  /ANALYSIS reco_purchase reco_visit reco_care reco_contra  V531 V212 V384A V384B V384C
+ /PRINT UNIVARIATE INITIAL EXTRACTION FSCORE 
+  /PLOT EIGEN
+/CRITERIA FACTORS(1) ITERATE(25) 
+ /EXTRACTION PC  
+/ROTATION NOROTATE  
+/SAVE REG(ALL) 
+ /METHOD=CORRELATION.
+
+
+ /* Review new indecies.
+ 
+EXAMINE VARIABLES=V613 FAC1_all FAC1_eco FAC1_social FAC1_fam
+  /PLOT BOXPLOT HISTOGRAM NPPLOT
+  /COMPARE GROUPS
+  /STATISTICS DESCRIPTIVES EXTREME
+  /CINTERVAL 95
+  /MISSING LISTWISE
+  /NOTOTAL.
+ 
+
+/* review distribution.
+
+NPAR TESTS
+  /K-S(NORMAL)=V613 nonnumAbility
+  /K-S(POISSON)=V613 nonnumAbility
+  /STATISTICS DESCRIPTIVES
+  /MISSING ANALYSIS.
+
+
+/* review  z-scores.
+
+DESCRIPTIVES VARIABLES=FAC1_all FAC1_eco FAC1_social FAC1_fam
+  /SAVE
+  /STATISTICS=MEAN STDDEV MIN MAX VARIANCE.
+
+
+/* remove extremes and outliers.
+
+DATASET ACTIVATE DataSet1.
+FILTER OFF.
+USE ALL.
+SELECT IF (ZFAC1_all <= 2.68 OR ZFAC1_eco <= 2.68 OR ZFAC1_social <= 2.68 OR ZFAC1_fam <= 2.68 OR 
+    ZFAC1_all >= -2.68 OR ZFAC1_eco >= -2.68  OR ZFAC1_social  >= -2.68  OR ZFAC1_fam  >= -2.68 ).
+EXECUTE.
+
+```
+
+
+Required packages & libraries.
+```{r}
+
+##activate libraries 
+installed.packages("magrittr")
+install.packages("knitr")#for creating nicer tables
+install.packages("foreign") #for accessing foreign library of functions
+install.packages("haven") #for accessing haven library of functions
+install.packages("readr") #for accessing readr libary of functions
+install.packages("rmarkdown")
+install.packages("pastecs")
+install.packages("sandwich")
+install.packages("MASS")
+install.packages("stargazer")
+install.packages("memisc")
+install.packages("lmtest")
+library(dplyr)
+library(foreign)
+library(magrittr)
+# Load MASS for negative bin
+library(MASS)
+# Load ggplot for graphing
+library(ggplot2)
+# Load lmtest library for coeftest
+library(lmtest)
+library(memisc)
+# Load sandwich library for robust estimator
+library(kableExtra)
+library(broom)
+#load stargazer library to view a comparison of standard errors
+library(sandwich)
+library(stargazer)
+library(pastecs) #for summary statistics
+library(foreign) #for reading spss (read.spss()), stata (read.dta()) and xpt (read.xport()) files
+library(haven) #for reading SPSS (read_sav()), stata (read_dta()), SAS(read_sas()) and xpt (read_xpt()) files
+library(knitr) #for creating nicer tables
+```
+
+Pre-analysis
+```{r}
+# see spss syntax
+```
+
+Import SPSS
+```{r}
+DHS_ADA <- read.spss("finalada4.27.2all.sav", to.data.frame=TRUE)#read in SPSS file
+
+#look at the data
+summary(DHS_ADA)
+
+print(DHS_ADA)
+
+```
+
+Verify the classes of all varible of interests.
+```{r}
+#check class for  empowerment and ensure they are numeric variables 
+class(DHS_ADA$FAC1_all) #overall empowerment index
+class(DHS_ADA$FAC1_eco) #economic empowerment index
+class(DHS_ADA$FAC1_social) #social empowerment index
+class(DHS_ADA$FAC1_fam) #family empowerment index
+class(DHS_ADA$V012) #respondent age
+
+#check class for interger variables
+class(DHS_ADA$V613)   # ideal/desired number ofchildren
+DHS_ADA$V613<-as.integer(as.character(DHS_ADA$V613)) #change to interger
+class(DHS_ADA$V613)#check again
+
+# check class for categorical variable
+class(DHS_ADA$ nonnumAbility) # ability to acchieve ideal/desired children
+class(DHS_ADA$V102) #residence
+class(DHS_ADA$V190A) #wealth index catergories 
+class(DHS_ADA$V701)  #Husband's education           
+class(DHS_ADA$size_reco) #households size recoded
+ class(DHS_ADA$V505) #type of marriage
+class(DHS_ADA$V130)   # Religion
+```
+
+Recode age (V012) into age catergories (agecat)
+```{r}
+summary(DHS_ADA$V012)
+#recode age from numeric to categories 35:38=1; 39:42=2; 43:46=3; 45:49=4
+library(car)
+
+attach(DHS_ADA)
+DHS_ADA$agecat[V012 >= 45] <- "45+"
+DHS_ADA$agecat[V012 >= 42 & V012 <= 44] <- "41 to 44"
+DHS_ADA$agecat[V012 >= 38 & V012 <= 41] <- "38 to 41"
+DHS_ADA$agecat[V012 >= 35 & V012 <= 37] <- "35 to 37"
+detach(DHS_ADA)
+
+DHS_ADA$agecat<-as.factor(as.character(DHS_ADA$agecat)) #change class to catergory
+#review recode
+summary(DHS_ADA$agecat)
+
+```
+
+Tables
+```{r}
+glm.RR <- function(GLM.RESULT, digits = 2) {
+
+    if (GLM.RESULT$family$family == "binomial") {
+        LABEL <- "OR"
+    } else if (GLM.RESULT$family$family == "poisson") {
+        LABEL <- "RR"
+    } else {
+        stop("Not logistic or Poisson model")
+    }
+
+    COEF      <- stats::coef(GLM.RESULT)
+    CONFINT   <- stats::confint(GLM.RESULT)
+    TABLE     <- cbind(coef=COEF, CONFINT)
+    TABLE.EXP <- round(exp(TABLE), digits)
+
+    colnames(TABLE.EXP)[1] <- LABEL
+
+    TABLE.EXP}
+```
+
+
+
+Loking at Ideal number of children (V613) and verifying using a histogram that it follows a Poisson distribution.
+```{r}
+summary(DHS_ADA)
+library(ggplot2)
+
+#create a historgram
+ggplot(data = DHS_ADA, aes(x = V613)) +
+geom_histogram() +
+labs(x = "Ideal/Desired Number of Children" , title = "Distribution of Ideal/Desired Number of Children")
+
+cat("The plot is roughly follows a Poisson distribution ")
+
+```
+
+
+
+Table 2. Model 1a Possion  regression women's empowerment aggregated (FAC1_all)  and  ideal number of children (v613)
+```{r}
+#Univariate model empowerment and children
+modelAP <-  glm(V613 ~ FAC1_all, family ="poisson", data = DHS_ADA)
+
+#regular Poisson results
+summary(modelAP)
+
+#empowerment IRRs and 95% CIs
+glm.RR(modelAP, 2)
+
+cat ("The number of ideal children was 4% lower with every unit increase in women's empowerment, and the incidence rate ratio is statistically significant (IRR:0.96; 95% CI:0.94-0.98)")
+
+```
+
+First Model alternate. Negative Binomial Regression women aggregated  empowerment and  ideal number of children
+```{r}
+library(lmtest)
+library(MASS)
+
+# Negative binomial regression for disaggreated empoweremetn
+negbmEP <- glm.nb(V613 ~ FAC1_all , data = DHS_ADA)
+summary(negbmEP)
+
+#Checking for overdispersion by comparing  the Poisson and negative binomial models for sex
+lrtest(negbmEP, modelAP)
+
+```
+
+```{r}
+stargazer(negbmEP,modelAP,type="text",align=TRUE,single.row=TRUE, digits=5)
+
+cat (" Variance is  almost equal in both models, howver AIC is slighty higher in Negative binomial model than the possion. The standard error for the negative binomial model (SE=0.011) is equal to the Poisson regression model (SE=0.011).")
+```
+
+
+
+
+Table 2. Model 2a Possion regression women's empowerment aggregate and  ideal number of children with covariates (residence, wealth index catergories, Husband's education, households size recoded, type of marriage, Religion) 
+V190A +V701 + size_reco + V505 + V130 + V102
+```{r}
+#model empowerment and children
+modelAdj1 <-  glm(V613 ~ FAC1_all + V190A +V701 + size_reco + V505 + V130 + V102, family ="poisson", data = DHS_ADA)
+
+#regular Poisson results
+summary(modelAdj1)
+
+#empowerment IRRs and 95% CIs
+glm.RR(modelAdj1, 2)
+
+cat ("The number of ideal children was 5% lower with every unit increase in women's empowerment, and the incidence rate ratio is statistically significant (IRR:0.95; 95% CI:0.93-0.98)")
+```
+
+Table 2. Model 3a Age adjusted Possion regression  of women's empowerment aggregate and  ideal number of children with covariates (residence, wealth index catergories, Husband's education, households size recoded, type of marriage, Religion) 
+V190A +V701 + size_reco + V505 + V130 + V102 + agecat
+```{r}
+#model empowerment and children
+modelAdj1age <-  glm(V613 ~ FAC1_all + V190A +V701 + size_reco + V505 + V130 + V102 + agecat, family ="poisson", data = DHS_ADA)
+
+#regular Poisson results
+summary(modelAdj1age)
+
+#empowerment IRRs and 95% CIs
+glm.RR(modelAdj1age, 2)
+
+cat ("After adjusting for age there was no change in the parameter. The number of ideal children was 5% lower with every unit increase in women's empowerment, and the incidence rate ratio is statistically significant (IRR:0.95; 95% CI:0.92-0.98)")
+```
+
+
+Table 2. Model 1b Unadjusted Possion  regression women's empowerment disaggregates (FAC1_eco FAC1_social FAC1_fam)  and  ideal number of children (v613) no convariates
+```{r}
+# Unadjusted disaggregated model empowerment and children
+modelDAP <-  glm(V613 ~ FAC1_eco + FAC1_social + FAC1_fam, family ="poisson", data = DHS_ADA)
+
+#regular Poisson results
+summary(modelDAP)
+
+#empowerment IRRs and 95% CIs
+glm.RR(modelDAP, 2)
+
+cat ("The number of ideal children was 6% higher with every unit increase in economic empowerment, and the incidence rate ratio is statistically significant (IRR:1.06; 95% CI:1.04-1.08).The number of ideal children was 1% lower with every unit increase in social empowerment but this was not statistically significant (IRR:0.99; 95% CI:0.97-1.01). The number of ideal children was 4% lower with every unit increase in family  empowerment, and the incidence rate ratio is statistically significant (IRR:0.96; 95% CI:0.94-0.98).")
+
+```
+
+Table 2. Model 2b Adjusted Possion  regression of women's empowerment disaggregates  and  ideal number of children with covariates (residence, wealth index catergories, Husband's education, households size recoded, type of marriage, Religion) 
+V190A +V701 + size_reco + V505 + V130 + V102 
+```{r}
+#model empowerment and children
+modelDAdj2 <-  glm(V613 ~ FAC1_eco + FAC1_social + FAC1_fam + V190A +V701 + size_reco + V505 + V130 + V102, family ="poisson", data = DHS_ADA)
+
+#regular Poisson results
+summary(modelDAdj2)
+
+#empowerment IRRs and 95% CIs
+glm.RR(modelDAdj2, 2)
+
+cat (" The  number of ideal children was 7% higher with every unit increase in economic empowerment, and the incidence rate ratio is statistically significant (IRR:1.07; 95% CI:1.04-1.09).The number of ideal children was 2% lower with every unit increase in social empowerment but the incidence rate ratio is not statistically significant (IRR:0.98; 95% CI:0.96-1.01).The number of ideal children was 4% lower with every unit increase in family empowerment and this was statistically significant (IRR:0.96; 95% CI:0.94-0.98)")
+```
+
+Table 2. Model 3b. Age (agecat) adjusted Possion  regression of women's empowerment disaggregates  and  ideal number of children with covariates (residence, wealth index catergories, Husband's education, households size recoded, type of marriage, Religion) V190A +V701 + size_reco + V505 + V130 + V102 
+```{r}
+#model empowerment and children
+modelAdjAge <-  glm(V613 ~ FAC1_eco + FAC1_social + FAC1_fam + V190A +V701 + size_reco + V505 + V130 + V102 + agecat, family ="poisson", data = DHS_ADA)
+
+#regular Poisson results
+summary(modelAdjAge)
+
+#empowerment IRRs and 95% CIs
+glm.RR(modelAdjAge, 2)
+
+cat (" After  adding age to adjusted model the did not change. the  number of ideal children was 7% higher with every unit increase in economic empowerment, and the incidence rate ratio is statistically significant (IRR:1.07; 95% CI:1.04-1.09).The number of ideal children was 2% lower with every unit increase in social empowerment but the incidence rate ratio is not statistically significant (IRR:0.98; 95% CI:0.94-1.01).The number of ideal children was 4% lower with every unit increase in family empowerment and this was statistically significant (IRR:0.96; 95% CI:0.94-0.98)")
+```
+
+
+
+Table 3. Model 1a, 2a, and 3a Multiple logistic regression: women's empowerment and ability to achieve desired fertility goal (nonnumAbility) coefficents and Std Errors, Deviance
+```{r}
+#model 1a Unadjusted multinomial model
+
+modun1all <- multinom(nonnumAbility ~ FAC1_all, data = DHS_ADA)
+summary(modun1all)
+
+
+#model 2a Adjusted multinomial model adjusted for age,
+
+modad1all <- multinom(nonnumAbility ~ FAC1_all + V190A +V701 + size_reco + V505 + V130 + V102, data = DHS_ADA)
+summary (modad1all)
+
+#Model 3a Adjusted multinomial model adjusted for age and other covariates
+
+modag1all <- multinom(nonnumAbility ~ FAC1_all + V190A +V701 + size_reco + V505 + V130 + V102 + agecat, data = DHS_ADA)
+summary (modag1all)
+
+```
+
+Table 3. Model 1a, 2a, and 3a Multiple logistic regression: women's empowerment and ability to achieve desired fertility goal (nonnumAbility) Z-scores , 95% CI
+```{r}
+
+#calculate z score
+z <- summary(modun1all)$coefficients/summary(modad1all)$standard.errors
+# 2-tailed Z test
+p <- (1 - pnorm(abs(z), 0, 1))*2
+p
+
+#Get confidence intervals for the log odds using confint function
+ci1un <- confint(modun1all)
+ci1un
+
+#Get confidence intervals for the log odds using confint function
+ci1ad <- confint(modad1all)
+ci1ad
+
+#Get confidence intervals for the log odds using confint function
+ci1ag <- confint(modag1all)
+ci1ag
+```
+
+Table 3. Model 1a, 2a, and 3a Multiple logistic regression: disaggregated women's empowerment and ability to achieve desired fertility goal (nonnumAbility) (nonnumAbility)  OR (Exponated β)
+```{r}
+# Model 1a Exponated β for unadjusted ORs for associations between women's empowerment and ability to achieve desired fertility goal
+exp(coef(modun1all))
+
+exp(confint(modun1all, level=0.95))
+
+# Model 2a Exponated β for adjusted ORs for associations between women's empowerment and ability to achieve desired fertility goal
+exp(coef(modad1all))
+
+exp(confint(modad1all, level=0.95))
+
+# Model 3a  Exponated β for   adjusted (covariates and age) ORs for associations between  women's empowerment and ability to achieve desired fertility goal
+exp(coef(modag1all))
+
+exp(confint(modag1all, level=0.95))
+
+```
+
+
+Table 3.Model 1b, 2b, and 3b Multiple logistic regression: disaggregated women's empowerment and ability to achieve desired fertility goal (nonnumAbility) coefficents and Std Errors, Deviance
+```{r}
+#model 1b Unadjusted multinomial model
+
+modun1dis <- multinom(nonnumAbility ~ FAC1_eco + FAC1_social + FAC1_fam, data = DHS_ADA)
+summary(modun1dis)
+
+
+#model 2b Adjusted multinomial model adjusted for covariates,
+
+modad1dis <- multinom(nonnumAbility ~ FAC1_eco + FAC1_social + FAC1_fam + V190A +V701 + size_reco + V505 + V130 + V102, data = DHS_ADA)
+summary (modad1dis)
+
+#Model 3b Adjusted multinomial model adjusted for covariates and age
+modag1dis <- multinom(nonnumAbility ~ FAC1_eco + FAC1_social + FAC1_fam + V190A +V701 + size_reco + V505 + V130 + V102 + agecat, data = DHS_ADA)
+summary (modag1dis)
+
+```
+
+Table 3. Model 1b, 2b, and 3b Multiple logistic regression: disaggregated women's empowerment and ability to achieve desired fertility goal (nonnumAbility) Z-scores , 95% CI
+```{r}
+
+#calculate z score
+z <- summary(modun1dis)$coefficients/summary(modad1dis)$standard.errors
+# 2-tailed Z test
+p <- (1 - pnorm(abs(z), 0, 1))*2
+p
+
+#Model 1b confidence intervals for the log odds using confint function
+ci1un <- confint(modun1dis)
+ci1un
+
+#Model 2b Get confidence intervals for the log odds using confint function
+ci1ad <- confint(modad1dis)
+ci1ad
+
+#Model 3b confidence intervals for the log odds using confint function
+ci1ag <- confint(modag1dis)
+ci1ag
+```
+
+Table 3. Model 1b, 2b, and 3b Multiple logistic regression: disaggregated women's empowerment and ability to achieve desired fertility goal (nonnumAbility)  OR (Exponated β)
+```{r}
+# Model 1b Exponated β for unadjusted ORs for women's empowerment and ability to achieve desired fertility goal 
+exp(coef(modun1dis))
+
+exp(confint(modun1dis, level=0.95))
+
+# Model 2b Exponated β for adjusted ORs for association between women's empowerment and ability to achieve desired fertility goal 
+exp(coef(modad1dis))
+
+exp(confint(modad1dis, level=0.95))
+
+# Model 3b  Exponated β , adjusted ORs for covariates and plus age  for associations between women's empowerment and ability to achieve desired fertility goal 
+exp(coef(modag1dis))
+
+exp(confint(modag1dis, level=0.95))
+
+```
+
